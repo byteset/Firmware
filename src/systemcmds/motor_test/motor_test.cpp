@@ -39,11 +39,11 @@
  */
 
 #include <drivers/drv_hrt.h>
-#include <px4_config.h>
-#include <px4_getopt.h>
-#include <px4_log.h>
-#include <px4_module.h>
-#include <uORB/PublicationQueued.hpp>
+#include <px4_platform_common/px4_config.h>
+#include <px4_platform_common/getopt.h>
+#include <px4_platform_common/log.h>
+#include <px4_platform_common/module.h>
+#include <uORB/Publication.hpp>
 #include <uORB/topics/test_motor.h>
 
 extern "C" __EXPORT int motor_test_main(int argc, char *argv[]);
@@ -68,13 +68,14 @@ void motor_test(unsigned channel, float value, uint8_t driver_instance, int time
 		PX4_INFO("motors stop command sent");
 
 	} else {
-		PX4_INFO("motor %d set to %.2f", channel, (double)value);
+		/* Adjust for 1-based motor indexing */
+		PX4_INFO("motor %d set to %.2f", channel + 1, (double)value);
 	}
 }
 
 static void usage(const char *reason)
 {
-	if (reason != NULL) {
+	if (reason != nullptr) {
 		PX4_WARN("%s", reason);
 	}
 
@@ -83,13 +84,11 @@ static void usage(const char *reason)
 Utility to test motors.
 
 WARNING: remove all props before using this command.
-
-Note: this can only be used for drivers which support the motor_test uorb topic (not px4io).
 )DESCR_STR");
 
 	PRINT_MODULE_USAGE_NAME("motor_test", "command");
 	PRINT_MODULE_USAGE_COMMAND_DESCR("test", "Set motor(s) to a specific output value");
-	PRINT_MODULE_USAGE_PARAM_INT('m', -1, 0, 7, "Motor to test (0...7, all if not specified)", true);
+	PRINT_MODULE_USAGE_PARAM_INT('m', -1, 1, 8, "Motor to test (1...8, all if not specified)", true);
 	PRINT_MODULE_USAGE_PARAM_INT('p', 0, 0, 100, "Power (0...100)", true);
 	PRINT_MODULE_USAGE_PARAM_INT('t', 0, 0, 100, "Timeout in seconds (default=no timeout)", true);
 	PRINT_MODULE_USAGE_PARAM_INT('i', 0, 0, 4, "driver instance", true);
@@ -108,23 +107,23 @@ int motor_test_main(int argc, char *argv[])
 	int timeout_ms = 0;
 
 	int myoptind = 1;
-	const char *myoptarg = NULL;
+	const char *myoptarg = nullptr;
 
 	while ((ch = px4_getopt(argc, argv, "i:m:p:t:", &myoptind, &myoptarg)) != EOF) {
 		switch (ch) {
 
 		case 'i':
-			driver_instance = (uint8_t)strtol(myoptarg, NULL, 0);
+			driver_instance = (uint8_t)strtol(myoptarg, nullptr, 0);
 			break;
 
 		case 'm':
-			/* Read in motor number */
-			channel = (int)strtol(myoptarg, NULL, 0);
+			/* Read in motor number and adjust for 1-based indexing */
+			channel = (int)strtol(myoptarg, nullptr, 0) - 1;
 			break;
 
 		case 'p':
 			/* Read in power value */
-			lval = strtoul(myoptarg, NULL, 0);
+			lval = strtoul(myoptarg, nullptr, 0);
 
 			if (lval > 100) {
 				usage("value invalid");
@@ -135,11 +134,11 @@ int motor_test_main(int argc, char *argv[])
 			break;
 
 		case 't':
-			timeout_ms = strtol(myoptarg, NULL, 0) * 1000;
+			timeout_ms = strtol(myoptarg, nullptr, 0) * 1000;
 			break;
 
 		default:
-			usage(NULL);
+			usage(nullptr);
 			return 1;
 		}
 	}
@@ -166,12 +165,12 @@ int motor_test_main(int argc, char *argv[])
 		} else if (strcmp("test", argv[myoptind]) == 0) {
 			// nothing to do
 		} else {
-			usage(NULL);
+			usage(nullptr);
 			return 0;
 		}
 
 	} else {
-		usage(NULL);
+		usage(nullptr);
 		return 0;
 	}
 
